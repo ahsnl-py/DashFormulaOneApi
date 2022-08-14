@@ -12,11 +12,15 @@ dbname = os.environ.get("DBNAME")
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
+<<<<<<< HEAD
+    
+=======
 
+>>>>>>> 784eab129f7f40a736536c0f3c313da05b9ef8c7
     if test_config is None:
         app.config.from_mapping(
             SECRET_KEY=os.environ.get("SECRET_KEY"),
-            SQLALCHEMY_DATABASE_URI=f"postgresql://{username}:{password}@{host}:{port}/{dbname}",
+            SQLALCHEMY_DATABASE_URI=f"postgresql://{username}:{password}@{host}:{port}/{dbname}", #Ref(1): change approach in future
             SQLALCHEMY_TRACK_MODIFICATIONS=os.environ.get("SQLALCHEMY_TRACK_MODIFICATIONS")
         )   
     else:
@@ -36,3 +40,6 @@ def create_app(test_config=None):
         return jsonify({'error': 'Something went wrong, we are working on it'}), HTTP_500_INTERNAL_SERVER_ERROR
 
     return app
+
+# Notes References
+# Ref(1): Soution for hidden DB URL: https://stackoverflow.com/questions/35061914/how-to-change-database-url-for-a-heroku-application#:~:text=One%20way%20to%20edit%20the,that%20url%20of%20the%20database.

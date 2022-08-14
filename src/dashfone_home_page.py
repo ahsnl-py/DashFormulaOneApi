@@ -17,7 +17,7 @@ cors = CORS()
 @cross_origin()
 def getHomeStats(id):
     query = ""
-    year = 2016
+    year = 2014
     if id == "driver-stats":
         query = f"""
                     SELECT rank, driver, team, points 

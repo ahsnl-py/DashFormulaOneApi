@@ -12,7 +12,11 @@ dbname = os.environ.get("DBNAME")
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> 784eab129f7f40a736536c0f3c313da05b9ef8c7
     if test_config is None:
         app.config.from_mapping(
             SECRET_KEY=os.environ.get("SECRET_KEY"),

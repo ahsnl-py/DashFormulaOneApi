@@ -7,17 +7,10 @@ from src.dashfone_home_page import stats, db, cors
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
 
-    username = 'vhqehuwdwfuyyl'
-    password = '45b56a2442d08dddebcd39177a2048da8054b203ad75e1916fca9cf16980a05b'
-    host = 'ec2-3-248-87-6.eu-west-1.compute.amazonaws.com'
-    port = 5432
-    dbname = 'ddncsklomh2hu2'
-
     if test_config is None:
         app.config.from_mapping(
             SECRET_KEY=os.environ.get("SECRET_KEY"),
-            # SQLALCHEMY_DATABASE_URI=os.environ.get("SQLALCHEMY_DATABASE_URI"),
-            SQLALCHEMY_DATABASE_URI=f"postgresql://{username}:{password}@{host}:{port}/{dbname}",
+            SQLALCHEMY_DATABASE_URI=os.environ.get("DATABASE_URL"),
             SQLALCHEMY_TRACK_MODIFICATIONS=os.environ.get("SQLALCHEMY_TRACK_MODIFICATIONS")
         )   
     else:

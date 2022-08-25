@@ -11,24 +11,28 @@ from etl.System.handle_config import HandleJobConfig
     
 class LoadGPSchedule(HandleJobConfig):
 
-    def __init__(self, config:dict):
+    def __init__(self, config:dict, job_name:str):
         HandleJobConfig.__init__(self)
         HandleJobConfig.__call__(self, **config)
-        self.db = cdb('dbconfig.ini')
+        self.jobName = job_name
+        self.db = cdb('dbconfig.ini', 'postgresql')
      
     def run_job(self):
-        
+        init_status_id = 99
+        self.jobConfig['job_name'] = self.jobName
         req_id = self.db.create_request(
             request_code=self.jobConfig['job_code'],
             race_date=self.jobConfig['job_rdate'],
-            request_status_id=99,
+            request_status_id=init_status_id,
             request_start_date=datetime.datetime.now(),
             request_end_date="null"
         )
-    
+        
         req_id, status_id = req_id[0], True if req_id[1] != 1 else False
         if status_id: 
+            msg = ""
             self.jobConfig['job_id'] = req_id         
+            self.jobConfig['job_status'] = init_status_id
             # iterate through job type
             for id, job in enumerate(self.jobConfig["job_type"]):
                 status = "fail"
@@ -51,33 +55,31 @@ class LoadGPSchedule(HandleJobConfig):
                 else: 
                     self.loadData()
         else:
-            # for i in range(len(self.jobConfig['job_status'])):
-            #     self.jobConfig['job_status'][i] = 1
-            print("Data already loaded for job {} on {} with id: {}".format(
+            # if data already load
+            self.jobConfig['job_status'] = 6
+            msg = "Data already loaded for job {} on {}".format(
                 self.jobConfig['job_name'],
-                self.jobConfig['job_rdate'],
-                self.jobConfig['job_id']
-            ))
-        
-        flag = False
-        for sid in self.jobConfig['job_status']:
-            if sid == 1:
-                # do auditing? 
-                continue
-            flag = True
-            print("one of the step fails. Re-load job")
-            break
-
-        if not flag:
-            # Close request once job complete based on each item from job config obj
-            self.db.close_request(
-                request_id=self.jobConfig['job_id'],
-                request_status_id=self.jobConfig['job_status'][0],
-                request_end_date=datetime.datetime.now(),
-                request_type_code=self.jobConfig['job_code']
+                self.jobConfig['job_rdate']
             )
-            return True
-        return False
+        
+        if self.jobConfig['job_status'] == 1:
+            # do auditing? 
+            pass
+        elif self.jobConfig['job_status'] == 6:
+            print(msg)
+            return 
+        else:
+            print("one of the step fails. Re-load job")
+        
+
+        # Close request once job complete based on each item from job config obj
+        self.db.close_request(
+            request_id=self.jobConfig['job_id'],
+            request_status_id=self.jobConfig['job_status'],
+            request_end_date=datetime.datetime.now(),
+            request_type_code=self.jobConfig['job_code']
+        )
+        return 
            
         
     def extractData(self):
@@ -90,10 +92,12 @@ class LoadGPSchedule(HandleJobConfig):
                 df=request, 
                 file_name=file_name
             )
+            
         return True if self.isJobComplete else False, [file_name]
 
     def transformData(self):
-        return self.db.load_from_csv(f"gp_schedule_{self.raceYear}.csv", 'dataload_race_gp_schedule')
+        # delete file after loading
+        return self.db.load_from_csv(f"gp_schedule_{self.raceYear}.csv", 'fact_race_gp_schedule')
 
     def loadData(self):
         self.jobConfig["job_type"][0]

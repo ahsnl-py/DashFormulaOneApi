@@ -11,7 +11,7 @@ class HandleJobConfig:
             "job_name": "",
             "job_code": "",
             "job_type": [],
-            "job_status": [],
+            "job_status": 0,
             "job_rdate": ""
         }
         
@@ -41,6 +41,9 @@ class HandleJobConfig:
 
             if k == "job_rdate":
                 self.raceYear = int(val[:4])
+            
+            if k == "job_type":
+                self.jobConfig[k] = val.split(",")
 
     def check_job_status(self, job_type, status="", destinations=""):
         get_job_state = lambda key, inputs: [opt_type[key] for opt_type in inputs]
@@ -69,13 +72,13 @@ class HandleJobConfig:
         # when package is ending, log the status id of each job type (extract, transform, load)
         if jobState == "End":
             # get job_type from jobState class attr 
-            job_type = self.jobState[idx]['type']
+            # job_type = self.jobState[idx]['type']
             # find the index of jobConfig current status
-            job_config_idx = self.jobConfig['job_type'].index(job_type)
+            # job_config_idx = self.jobConfig['job_type'].index(job_type)
             # get status id based on current job state 
             job_status_id = self.get_job_status(self.jobState[idx]['status'])
             # set job status to jobConfig class attr
-            self.jobConfig['job_status'][job_config_idx] = job_status_id
+            self.jobConfig['job_status'] = job_status_id
 
         jobInfo = f"| {self.jobTime} | {jobState} {self.jobConfig['job_type'][idx]} job {self.jobConfig['job_name']} ({self.jobConfig['job_code']}) on {self.jobTime.strftime('%x')} |"
         item_to_log = [
@@ -96,6 +99,6 @@ class HandleJobConfig:
                 print("{}: {}".format(k,v))
 
     def get_job_status(self, status_type:int) -> str:
-        status = ["Success", "Failed", "Purge", "Terminated", "Waiting"]
+        status = ["Success", "Failed", "Purge", "Terminated", "Waiting", "Loaded"]
         return status.index(status_type)+1 
 

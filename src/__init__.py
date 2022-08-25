@@ -36,10 +36,6 @@ def create_app(test_config=None):
 
     return app
 
-def run_etl():
-    print("Executing JOB: Load GP Stats")
-    pass
-
 
 # Notes References
 # Ref(1): Soution for hidden DB URL: https://stackoverflow.com/questions/35061914/how-to-change-database-url-for-a-heroku-application#:~:text=One%20way%20to%20edit%20the,that%20url%20of%20the%20database.

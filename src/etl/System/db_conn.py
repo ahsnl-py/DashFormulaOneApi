@@ -2,12 +2,12 @@ import pandas as pd
 import psycopg2
 import os
 import datetime as dt
-from config.config import config_dash_db
+from config.config import set_config
 
 class ConnectorDB:
 
-    def __init__(self, db_config:str) -> None:
-        self.params = config_dash_db(config_db = db_config)
+    def __init__(self, db_config_file:str, db_config_sec:str) -> None:
+        self.params = set_config(config_file_name = db_config_file, config_sec_name = db_config_sec)
         self.conn = psycopg2.connect(**self.params)
         self.filePath = '{0}\{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'cache\csv')  
         self.dbObject = "" 

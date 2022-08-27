@@ -84,7 +84,7 @@ class LoadGPSchedule(HandleJobConfig):
         
     def extractData(self):
         file_name = f"gp_schedule_{self.raceYear}.csv"
-        request, response = cff1(self.raceYear).get_race_schedule()
+        request, response = cff1().get_race_schedule(self.raceYear)
         if response:
             request = request.loc[:, self.gp_schedule_schema()]
             request['request_id'] = self.jobConfig['job_id']

@@ -114,21 +114,59 @@ class ConnectorDB:
             """
         curs.execute(query)
         return [cols[0] for cols in curs.description if cols[0] != "race_id"]
-
-    def execute(self, conn, statement, rollback_on_error=True):
-        try:
-            cursor = conn.cursor()
-            cursor.execute(statement)
-            if not rollback_on_error:
-                conn.commit() # commit on each statement
-        except Exception as e:
-            if rollback_on_error:
-                conn.rollback()
-            raise
-        else:
-            if rollback_on_error:
-                conn.commit() 
     
+    def get_race_info_by_date(self, race_date:str):
+        try:
+            select = f"""
+                SELECT 
+                    _id, 
+                    race_type, 
+                    race_time, 
+                    race_name
+                FROM public.udf_get_race_info_by_date('{race_date}')
+            """
+            with self.conn:
+                with self.conn.cursor() as curs:
+                    curs.execute(select)
+                    if curs.rowcount > 0:
+                        # return curs.fetchall()
+                        df = pd.DataFrame(curs.fetchall(), 
+                                    columns=[
+                                        "_id", 
+                                        "race_type", 
+                                        "race_time", 
+                                        "race_name"
+                                    ])
+                        df.set_index('race_time', drop=False)
+                        return df
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)                
+        
+    def put_race_results(self, gp_res:list):
+        sql = f"""
+                INSERT INTO public.fact_race_gp_results_raw(
+                request_id, race_date, race_type, json_data)
+                VALUES (%s, %s, %s, %s);
+            """
+        self.execute_many(sql, gp_res)
+        return True 
+                
+    def execute_many(self, statement:str, res_list:list, rollback_on_error:bool=True):
+        try:
+            with self.conn:
+                with self.conn.cursor() as cur:
+                    cur.executemany(statement, res_list)
+                    if not rollback_on_error:
+                        self.conn.commit()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+            if rollback_on_error:
+                self.conn.rollback()
+            raise
+        finally:
+            if self.conn is not None and rollback_on_error:
+                self.conn.commit()
+
     def execute_multiple(self, conn, statements, rollback_on_error=True):
         """
         Execute multiple SQL statements and returns the cursor from the last executed statement.

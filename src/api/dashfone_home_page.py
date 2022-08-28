@@ -13,6 +13,27 @@ df1Tool = DashF1Tool()
 db = SQLAlchemy()
 cors = CORS()
 
+
+@stats.get("/<string:code>/<string:race_date>")
+@cross_origin()
+def getHomeOverviewStats(race_date:str, code:str):
+    query = f"""
+        SELECT json_data FROM public.udf_get_gp_race_res('{race_date}', '{code}')
+    """
+    df_race_res = pd.read_sql_query(query, con=db.engine)
+    if df_race_res.empty:
+        return jsonify({'message': 'Item not found'}), HTTP_404_NOT_FOUND
+    race_data = df_race_res.loc[0]['json_data']
+    request = []
+    for k in race_data['data'].keys():
+          arr_1 = race_data['data'][k]
+          arr_2 = race_data['columns']
+          request.append(dict(zip(arr_2, arr_1)))
+    # select top three finisher only
+    sort_request = sorted(request, key=lambda d: d['Points'], reverse=True) 
+    return sort_request[:3], HTTP_200_OK
+    
+
 @stats.get("/<string:id>")
 @cross_origin()
 def getHomeStats(id):

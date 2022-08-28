@@ -21,7 +21,14 @@ def getHomeOverviewStats(race_date:str, code:str):
         SELECT json_data FROM public.udf_get_gp_race_res('{race_date}', '{code}')
     """
     df_race_res = pd.read_sql_query(query, con=db.engine)
-    if df_race_res.empty:
+
+    query_race_name = f"""
+        SELECT race_country_event, race_name_event 
+        from public.udf_get_race_details_by_date('{race_date}')
+    """
+    df_race_name_details = pd.read_sql_query(query_race_name, con=db.engine)
+
+    if df_race_res.empty or df_race_name_details.empty:
         return jsonify({'message': 'Item not found'}), HTTP_404_NOT_FOUND
     race_data = df_race_res.loc[0]['json_data']
     request = []
@@ -31,7 +38,11 @@ def getHomeOverviewStats(race_date:str, code:str):
           request.append(dict(zip(arr_2, arr_1)))
     # select top three finisher only
     sort_request = sorted(request, key=lambda d: d['Points'], reverse=True) 
-    return sort_request[:3], HTTP_200_OK
+    request = {
+        'front_runner_data': sort_request[:3],
+        'race_event_info': json.loads(df_race_name_details.to_json(orient="records"))
+    }
+    return json.dumps(request), HTTP_200_OK
     
 
 @stats.get("/<string:id>")

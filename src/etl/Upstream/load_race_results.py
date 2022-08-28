@@ -110,6 +110,6 @@ class LoadRaceResults(HandleJobConfig):
             , 'Q2'
             , 'Q3'
             , 'Time'
-            , 'Status'
+            , 'TeamColor'
             , 'Points'
         ]

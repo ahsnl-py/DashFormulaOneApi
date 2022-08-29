@@ -24,9 +24,5 @@ def ValidateRaceDateByCode(race_date:str, code:str):
     if df_validate_date.empty:
         return jsonify({'message': 'Item not found'}), HTTP_404_NOT_FOUND
     parsed = json.loads(df_validate_date.to_json(orient="records"))
-    # {
-    #     'validateDate':  json.loads(df_validate_date.to_json(orient="split"))
-    #     # df_validate_date.loc[0]['_isexists']
-    # }
     return json.dumps(parsed, indent=4), HTTP_201_CREATED
 

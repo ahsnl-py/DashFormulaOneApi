@@ -72,5 +72,33 @@ def getHomeStats(id):
     
     return request, HTTP_200_OK
 
+@stats.get("/race-schedule/<int:year>")
+@cross_origin()
+def getHomeSchedule(year:int):
+    query = f"""    
+            select 
+                race_country,
+                race_location,
+                race_event_name_official,                
+                race_session_one,
+                race_session_one_date,
+                race_session_two,
+                race_session_two_date,
+                race_session_three,
+                race_session_three_date,
+                race_session_four,
+                race_session_four_date,
+                race_session_five,
+                race_session_five_date
+            from fact_race_gp_schedule
+            where date_part('year', race_date) = '{str(year)}'
+    """
+    df_json = pd.read_sql_query(query, con=db.engine)
+    if df_json.empty:
+        return jsonify({'message': 'Item not found'}), HTTP_404_NOT_FOUND
+    parse = df1Tool.parseGPSchedule(df_json.to_json(orient="split"))
+    return json.dumps(parse), HTTP_200_OK
+
+
 
 

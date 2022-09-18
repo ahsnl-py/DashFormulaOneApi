@@ -142,7 +142,7 @@ class ConnectorDB:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)                
         
-    def put_race_results(self, gp_res:list):
+    def dump_race_results(self, gp_res:list):
         sql = f"""
                 INSERT INTO public.fact_race_gp_results_raw(
                 request_id, race_date, race_type, json_data)

@@ -26,6 +26,7 @@ class LoadRaceResults(HandleJobConfig):
         )
 
         req_id, is_load = req_id[0], False if req_id[1] != 1 else True
+        print(req_id, is_load)
         if not is_load:
             msg = ""
             self.jobConfig['job_id'] = req_id         
@@ -43,7 +44,7 @@ class LoadRaceResults(HandleJobConfig):
                             status = "fail"
                             msg = "Issue detect while extracting request data"
                     self.check_job_status(job, status)
-
+             
         else:
             # if data already load
             self.jobConfig['job_status'] = 6
@@ -97,13 +98,18 @@ class LoadRaceResults(HandleJobConfig):
         # rid, race_date, race_type, data
         # --------------------------------------------
         # 1, 2022-08-29, Practice 1, {'columns':list, 'data':json_data}
-        status = self.db.put_race_results(res_list)
+        status = self.db.dump_race_results(res_list)
         return True if status else False 
-       
+    
+    def transformData(self):
+        
+        pass
 
     def get_race_results_schema(self) -> list:
         return [
             'BroadcastName'
+            , 'FullName'
+            , 'TeamName'
             , 'Position'
             , 'GridPosition'
             , 'Q1'

@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask.json import jsonify
 from src.utils.DashF1Tool import DashF1Tool
 
+import datetime
 import json
 import pandas as pd
 
@@ -49,16 +50,22 @@ def getHomeOverviewStats(race_date:str, code:str):
 @cross_origin()
 def getHomeStats(id):
     query = ""
-    year = 2014
+    year = str(datetime.datetime.now().date())
     if id == "driver-stats":
         query = f"""
-                    SELECT rank, driver, team, points 
-                    FROM public.udf_get_driver_stats({str(year)})
+                    SELECT standing_pos as Rank, 
+                            full_name   as Driver,
+                            team        as Team,
+                            points      as Points
+                    FROM public.udf_get_drivers_standings_by_year('{str(year)}')
                 """
     elif id == "constructor-stats":
         query = f"""
-                    SELECT rank, team, points 
-                    FROM public.udf_get_constructor_stats({str(year)})
+                    SELECT standing_pos     as Rank, 
+                            team_name       as Driver,
+                            drivers         as Team,
+                            points          as Point
+                    FROM public.udf_get_constructors_standings_by_year('{str(year)}')
                 """
     df_drivers = pd.read_sql_query(query, con=db.engine)
     if df_drivers.empty:

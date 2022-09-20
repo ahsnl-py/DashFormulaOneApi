@@ -7,7 +7,7 @@ import os
 import tempfile
 from tempfile import mkstemp
 from pathlib import Path
-
+from static.database import dash_db_request_type_code
 
 import configparser
 import gzip
@@ -51,7 +51,6 @@ def download_from_s3(backup_s3_key, dest_file):
         print(e)
         exit(1)
 
-
 def list_available_backup():
     key_list = []
     s3_client = boto3.client('s3')
@@ -80,20 +79,21 @@ def list_postgres_databases(host, database_name, port, user, password):
         exit(1)
 
 
-def backup_postgres_db(host, database_name, port, user, password, dest_file, verbose):
+def backup_postgres_db(host, database_name, port, user, password, dest_file, verbose, is_schema_only=False):
     """
     Backup postgres db to a file.
     """
     if verbose:
         try:
-            process = subprocess.Popen(
-                ['pg_dump',
+            dump_cmd = [
+                'pg_dump',
                  '--dbname=postgresql://{}:{}@{}:{}/{}'.format(user, password, host, port, database_name),
                  '-Fc',
                  '-f', dest_file,
-                 '-v'],
-                stdout=subprocess.PIPE
-            )
+                 '-v'
+                ]
+            if is_schema_only: dump_cmd.append('-s')
+            process = subprocess.Popen(dump_cmd, stdout=subprocess.PIPE)
             output = process.communicate()[0]
             if int(process.returncode) != 0:
                 print('Command failed. Return code : {}'.format(process.returncode))
@@ -181,6 +181,34 @@ def change_user_from_dump(source_dump_path, old_user, new_user):
     os.remove(source_dump_path)
     # Move new file
     move(abs_path, source_dump_path)
+
+
+def restore_postgres_db_simple(db_host, db, port, user, password, backup_file):
+    """
+    Restore postgres db from a file in simple mode.
+    """
+    print(user,password,db_host,port, db)
+    try:
+        process = subprocess.Popen(
+            ['pg_restore',
+                '-c',
+                '--no-owner',
+                '--dbname=postgresql://{}:{}@{}:{}/{}'.format(user,
+                                                            password,
+                                                            db_host,
+                                                            port, db),
+                '-v',
+                backup_file],
+            stdout=subprocess.PIPE
+        )
+        output = process.communicate()[0]
+        if int(process.returncode) != 0:
+            print('Command failed. Return code : {}'.format(process.returncode))
+
+        return output
+    except Exception as e:
+        print("Issue with the db restore : {}".format(e))
+
 
 
 def restore_postgres_db(db_host, db, port, user, password, backup_file, verbose):
@@ -280,6 +308,47 @@ def swap_restore_new(db_host, restore_database, new_database, db_port, user_name
         print(e)
         exit(1)
 
+def insert_static_values(db_host, database, db_port, user_name, user_password, sql, values):
+
+    try:
+        conn = psycopg2.connect(
+            dbname=database, 
+            port=db_port,
+            user=user_name, host=db_host,
+            password=user_password
+        )
+        # create a new cursor
+        cur = conn.cursor()
+        cur.executemany(sql,values)
+        conn.commit()
+    except Exception as e:
+        print(e)
+        exit(1)
+
+def copy_csv_to_server(db_host, db, port, user, password, filename):
+    try:
+        print(user,password,db_host,port, db)
+        process = subprocess.Popen(
+            ['pg_restore',
+                '--no-owner',
+                '--dbname=postgresql://{}:{}@{}:{}/{}'.format(user,
+                                                            password,
+                                                            db_host,
+                                                            port, db),
+                '-v',
+                backup_file],
+            stdout=subprocess.PIPE
+        )
+        output = process.communicate()[0]
+        if int(process.returncode) != 0:
+            print('Command failed. Return code : {}'.format(process.returncode))
+
+        return output
+    except Exception as e:
+        print("Issue with the db restore : {}".format(e))
+    
+    pass
+
 
 def main():
     logger = logging.getLogger(__name__)
@@ -291,7 +360,7 @@ def main():
     args_parser = argparse.ArgumentParser(description='Postgres database management')
     args_parser.add_argument("--action",
                              metavar="action",
-                             choices=['list', 'list_dbs', 'restore', 'backup', 'recreate'],
+                             choices=['list', 'list_dbs', 'restore', 'backup', 'restore-s', 'static'],
                              required=True)
     args_parser.add_argument("--date",
                              metavar="YYYY-MM-dd",
@@ -306,10 +375,17 @@ def main():
     args_parser.add_argument("--configfile",
                              required=True,
                              help="Database configuration file")
+    args_parser.add_argument("--backupfile",
+                             required=False,
+                             help="Database backup file")
+    args_parser.add_argument("--schema",
+                            required=False,
+                            default=False,
+                            help="Database backup with schema only")                                      
     args = args_parser.parse_args()
     config = configparser.ConfigParser()
     config.read(args.configfile)
-
+    
     postgres_host = config.get('postgresql', 'host')
     postgres_port = config.get('postgresql', 'port')
     postgres_db = config.get('postgresql', 'database')
@@ -323,6 +399,8 @@ def main():
     restore_uncompressed = '/tmp/restore.dump'
     local_file_path = '{}{}'.format(BACKUP_PATH, filename)
     is_aws_bucket = True if config.get('setup', 'storage_engine') == 'S3' else False
+    root_path = str(Path().resolve())
+    filename_backup_uncompressed = "{}\\tmp\\{}.dump".format(root_path, args.backupfile)
 
     # list task
     if args.action == "list":
@@ -342,14 +420,18 @@ def main():
             logger.info(line)
     # backup task
     elif args.action == "backup":
-        local_file_path = "{}{}".format(str(Path().resolve()), local_file_path)
+        local_file_path = "{}{}".format(root_path, local_file_path)
         logger.info('Backing up {} database to {}'.format(postgres_db, local_file_path))
-        result = backup_postgres_db(postgres_host,
-                                    postgres_db,
-                                    postgres_port,
-                                    postgres_user,
-                                    postgres_password,
-                                    local_file_path, args.verbose)
+        result = backup_postgres_db(
+            postgres_host,
+            postgres_db,
+            postgres_port,
+            postgres_user,
+            postgres_password,
+            local_file_path, 
+            args.verbose,
+            args.schema
+        )
         for line in result.splitlines():
             logger.info(line)
 
@@ -373,36 +455,41 @@ def main():
                 os.remove(restore_filename)
             except Exception as e:
                 logger.info(e)
-            all_backup_keys = list_available_backup()
-            backup_match = [s for s in all_backup_keys if args.date in s]
-            if backup_match:
-                logger.info("Found the following backup : {}".format(backup_match))
-            else:
-                logger.error("No match found for backups with date : {}".format(args.date))
-                logger.info("Available keys : {}".format([s for s in all_backup_keys]))
-                exit(1)
+            
+            if is_aws_bucket:
+                all_backup_keys = list_available_backup()
+                backup_match = [s for s in all_backup_keys if args.date in s]
+                if backup_match:
+                    logger.info("Found the following backup : {}".format(backup_match))
+                else:
+                    logger.error("No match found for backups with date : {}".format(args.date))
+                    logger.info("Available keys : {}".format([s for s in all_backup_keys]))
+                    exit(1)
 
-            logger.info("Downloading {} from S3 into : {}".format(backup_match[0], restore_filename))
-            download_from_s3(backup_match[0], restore_filename)
-            logger.info("Download complete")
-            logger.info("Extracting {}".format(restore_filename))
-            ext_file = extract_file(restore_filename)
-            # cleaned_ext_file = remove_faulty_statement_from_dump(ext_file)
-            logger.info("Extracted to : {}".format(ext_file))
+                logger.info("Downloading {} from S3 into : {}".format(backup_match[0], restore_filename))
+                download_from_s3(backup_match[0], restore_filename)
+                logger.info("Download complete")
+                logger.info("Extracting {}".format(restore_filename))
+                ext_file = extract_file(restore_filename)
+                # cleaned_ext_file = remove_faulty_statement_from_dump(ext_file)
+                logger.info("Extracted to : {}".format(ext_file))
+
             logger.info("Creating temp database for restore : {}".format(postgres_restore))
+            logger.info("Reset database for restore: {}".format(postgres_restore))
             tmp_database = create_db(postgres_host,
-                      postgres_restore,
-                      postgres_port,
-                      postgres_user,
-                      postgres_password)
+                                        postgres_restore,
+                                        postgres_port,
+                                        postgres_user,
+                                        postgres_password)
             logger.info("Created temp database for restore : {}".format(tmp_database))
+            logger.info("Reset database complete")
             logger.info("Restore starting")
             result = restore_postgres_db(postgres_host,
                                          postgres_restore,
                                          postgres_port,
                                          postgres_user,
                                          postgres_password,
-                                         restore_uncompressed,
+                                         filename_backup_uncompressed,
                                          args.verbose)
             for line in result.splitlines():
                 logger.info(line)
@@ -431,13 +518,39 @@ def main():
                                     postgres_password)
             logger.info("Database restored and active.")
 
-    elif args.action == "recreate":
-        logger.info("Creating temp database for restore : {}".format(postgres_restore))
-        create_db(postgres_host, postgres_restore, postgres_port, postgres_user, postgres_password)
+    elif args.action == "restore-s":
+        if not args.backupfile:
+            logger.warning('No backup file name was given for restore.')
+        else:
+            logger.info("Start simple restore : {}".format(postgres_db))
+            restore_postgres_db_simple(
+                postgres_host, 
+                postgres_db, 
+                postgres_port, 
+                postgres_user, 
+                postgres_password,
+                filename_backup_uncompressed
+            )
+            logger.info("Complete restore database.")
+
+    elif args.action == "static":
+        logger.info("Start inserting static values...")
+        query, vals = dash_db_request_type_code.static_request_type_code()
+        insert_static_values(
+            postgres_host, 
+            postgres_db, 
+            postgres_port, 
+            postgres_user, 
+            postgres_password,
+            query,
+            vals
+        )
+        logger.info("Complete")
+
 
     else:
-        logger.warn("No valid argument was given.")
-        logger.warn(args)
+        logger.warning("No valid argument was given.")
+        logger.warning(args)
 
 if __name__ == '__main__':
     main()

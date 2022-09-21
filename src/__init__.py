@@ -3,6 +3,7 @@ from flask.json import jsonify
 from src.constants.http_status_codes import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 import os
 from src.api.dashfone_home_page import stats, db, cors
+from src.api.dashfone_request_to_db import utils, db, cors
 
 username = os.environ.get("DBUSERNAME")
 password = os.environ.get("DBPASS")
@@ -25,6 +26,7 @@ def create_app(test_config=None):
     db.init_app(app)
     cors.init_app(app)
     app.register_blueprint(stats)
+    app.register_blueprint(utils)
 
     @app.errorhandler(HTTP_404_NOT_FOUND)
     def handle_404(e):

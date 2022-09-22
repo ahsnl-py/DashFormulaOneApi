@@ -11,13 +11,16 @@ from etl.System.handle_config import HandleJobConfig
     
 class LoadGPSchedule(HandleJobConfig):
 
-    def __init__(self, config:dict, job_name:str):
+    def __init__(self, job_config:dict, job_name:str, env_config:str, env_type:str=''):
         HandleJobConfig.__init__(self)
-        HandleJobConfig.__call__(self, **config)
+        HandleJobConfig.__call__(self, **job_config)
         self.jobName = job_name
-        self.db = cdb('dbconfig.ini', 'postgresql')
+        self.db = cdb(
+            '{}.ini'.format(env_config), 
+            "{}_dashpg".format(env_type if env_type !='' else 'dev')
+        )
      
-    def run_job(self):
+    def exec_job(self):
         init_status_id = 99
         self.jobConfig['job_name'] = self.jobName
         req_id = self.db.create_request(

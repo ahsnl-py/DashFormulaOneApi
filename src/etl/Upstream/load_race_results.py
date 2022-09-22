@@ -7,13 +7,13 @@ from etl.System.handle_config import HandleJobConfig
 
 class LoadRaceResults(HandleJobConfig):
     
-    def __init__(self, config:dict, job_name:str) -> None:
+    def __init__(self, config:dict, job_name:str, env_config:str, env_type:str) -> None:
         HandleJobConfig.__init__(self)
         HandleJobConfig.__call__(self, **config)
         self.jobName = job_name
-        self.db = cdb('dbconfig.ini', 'postgresql')
+        self.db = cdb('{}.ini'.format(env_config), '{}_dashpg'.format(env_type))
 
-    def run_job(self):
+    def exec_job(self):
         # create request 
         init_status_id = 99
         self.jobConfig['job_name'] = self.jobName
@@ -26,7 +26,6 @@ class LoadRaceResults(HandleJobConfig):
         )
 
         req_id, is_load = req_id[0], False if req_id[1] != 1 else True
-        print(req_id, is_load)
         if not is_load:
             msg = ""
             self.jobConfig['job_id'] = req_id         

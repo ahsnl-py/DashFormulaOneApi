@@ -1,5 +1,6 @@
 import pandas as pd
 import psycopg2
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import os
 import datetime as dt
 from config.config import set_config
@@ -140,8 +141,24 @@ class ConnectorDB:
                         df.set_index('race_time', drop=False)
                         return df
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)                
-        
+            print(error)               
+
+    def get_list_race_date_by_year(self, year:str):
+        sql = f"""
+                SELECT json_agg(date(race_date))
+                FROM public.vw_race_dates_schedule
+                WHERE date_part('Year', race_date) = '{year}';
+            """
+        try:
+            self.conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+            cur = self.conn.cursor()
+            cur.execute(sql)
+
+            return cur.fetchone() if cur.rowcount > 0 else 0
+        except Exception as e:
+            print(e)
+            exit(1)
+
     def dump_race_results(self, gp_res:list):
         sql = f"""
                 INSERT INTO public.fact_race_gp_results_raw(
@@ -167,33 +184,4 @@ class ConnectorDB:
             if self.conn is not None and rollback_on_error:
                 self.conn.commit()
 
-    def execute_multiple(self, conn, statements, rollback_on_error=True):
-        """
-        Execute multiple SQL statements and returns the cursor from the last executed statement.
-
-        :param conn: The connection to the database
-        :type conn: Database connection
-
-        :param statements: The statements to be executed
-        :type statements: A list of strings
-
-        :param: rollback_on_error: Flag to indicate action to be taken on an exception
-        :type rollback_on_error: bool
-
-        :returns cursor from the last statement executed
-        :rtype cursor
-        """
-
-        try:
-            cursor = conn.cursor()
-            for statement in statements:
-                cursor.execute(statement)
-                if not rollback_on_error:
-                    conn.commit() # commit on each statement
-        except Exception as e:
-            if rollback_on_error:
-                conn.rollback()
-            raise
-        else:
-            if rollback_on_error:
-                conn.commit() # then commit only after all statements have completed successfully
+    

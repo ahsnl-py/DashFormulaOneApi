@@ -6,10 +6,6 @@ import configparser
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from config.config import set_config
-from dotenv import load_dotenv
-from pathlib import Path
-
-
 
 class DashF1DatabaseManager():
 
@@ -40,7 +36,6 @@ class DashF1DatabaseManager():
                     self.dbConfig[k] = val
 
             self.fileTempName = 'backup-{}-{}.dump'.format(self.timestr, self.dbConfig['database'])
-            load_dotenv(dotenv_path=Path('path/to/.env'))
 
         init_config(db_config_file)
 

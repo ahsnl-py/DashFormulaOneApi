@@ -19,7 +19,7 @@ class DashF1DatabaseManager():
             'password': ''
         }
         self.fileTempBackup = ''
-        self.fileTempPath = '{0}\{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'tmp')  
+        self.fileTempPath = os.path.normpath('{0}\{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'tmp'))
         self.timestr = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
         self.fileTempName = ''
 
@@ -72,7 +72,7 @@ class DashF1DatabaseManager():
         """
             Backup database to a dump file
         """
-        dest_file = "{0}\{1}".format(self.fileTempPath, self.fileTempName)
+        dest_file = os.path.normpath("{0}\{1}".format(self.fileTempPath, self.fileTempName))
         try:
             dump_cmd = [
                 'pg_dump', 
@@ -99,7 +99,7 @@ class DashF1DatabaseManager():
             exit(1)
     
     def restore_dash_db(self, file_name:str):
-        backup_file = "{0}\{1}.dump".format(self.fileTempPath, file_name)
+        backup_file = os.path.normpath("{0}\{1}.dump".format(self.fileTempPath, file_name))
         try:
             process = subprocess.Popen(
                 [
@@ -130,7 +130,7 @@ class DashF1DatabaseManager():
         """
         Restore postgres db from a file in simple mode.
         """    
-        backup_file = "{0}\{1}.dump".format(self.fileTempPath, file_name)
+        backup_file = os.path.normpath("{0}\{1}.dump".format(self.fileTempPath, file_name))
         try:
             process = subprocess.Popen(
                 [

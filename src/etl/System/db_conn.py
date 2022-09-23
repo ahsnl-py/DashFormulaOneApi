@@ -11,7 +11,7 @@ class ConnectorDB:
     def __init__(self, db_config_file:str, db_config_sec:str) -> None:
         self.params = set_config(config_file_name = db_config_file, config_sec_name = db_config_sec)
         self.conn = self.connection_db(db_config_file)
-        self.filePath = '{0}\{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'cache\csv')  
+        self.filePath = os.path.normpath('{0}\{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'cache\csv'))
         self.dbObject = ""
 
     def connection_db(self, file_name):
@@ -88,7 +88,7 @@ class ConnectorDB:
         return
 
     def load_to_csv(self, df, file_name) -> bool:
-        exportPath = '{0}\{1}'.format(self.filePath, file_name)
+        exportPath = os.path.normpath('{0}\{1}'.format(self.filePath, file_name))
         if not os.path.exists(exportPath):
             df.to_csv(exportPath, sep=',', encoding='utf-8', index=False, header='true')    
         return True if len(pd.read_csv(exportPath)) == len(df) else False

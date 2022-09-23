@@ -17,7 +17,7 @@ def main():
     args_parser = argparse.ArgumentParser(description='Postgres database management')
     args_parser.add_argument("--action",
                              metavar="action",
-                             choices=['list', 'list_dbs', 'restore', 'backup', 'restore-s', 'static'],
+                             choices=['list', 'list_dbs', 'restore', 'backup', 'restore-s', 'static', 'test'],
                              required=True)
     args_parser.add_argument("--env",
                             choices=['dev', 'uat', 'prod'],
@@ -34,9 +34,6 @@ def main():
     args_parser.add_argument("--verbose",
                              default=True,
                              help="verbose output")
-    args_parser.add_argument("--configfile",
-                             required=True,
-                             help="Database configuration file")
     args_parser.add_argument("--filename",
                              required=False,
                              help="Database file name for processing")
@@ -46,7 +43,13 @@ def main():
                             help="Database backup with schema only")
     
     args = args_parser.parse_args()
-    dbmanager = DashF1DatabaseManager(args.configfile, "{}_dashpg".format(args.env))
+    config_file = ''
+    if args.env in ('dev', 'uat'):
+        config_file = 'dbconfig.ini'
+    elif args.env == 'prod':
+        config_file = 'prod_dbconfig.ini'
+
+    dbmanager = DashF1DatabaseManager(config_file, "{}_dashpg".format(args.env))
     dbutils = DashF1DatbaseUtils()
 
     if args.action == "list_dbs":
@@ -124,6 +127,9 @@ def main():
         query, vals = request_code.static_request_type_code()
         dbmanager.insert_many(query, vals)
         logger.info("Complete")
+    
+    elif args.action == 'test':
+        print(dbmanager.dbConfig)
 
 if __name__ == '__main__':
     main()

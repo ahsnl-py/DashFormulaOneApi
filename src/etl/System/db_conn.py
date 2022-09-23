@@ -1,16 +1,27 @@
 import pandas as pd
 import psycopg2
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import os
 import datetime as dt
+import os
 from config.config import set_config
 
 class ConnectorDB:
 
     def __init__(self, db_config_file:str, db_config_sec:str) -> None:
         self.params = set_config(config_file_name = db_config_file, config_sec_name = db_config_sec)
-        self.conn = psycopg2.connect(**self.params)
+        self.conn = self.connection_db(db_config_file)
         self.filePath = '{0}\{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'cache\csv')  
-        self.dbObject = "" 
+        self.dbObject = ""
+
+    def connection_db(self, file_name):
+        if 'prod' in file_name:
+            self.params['host'] = os.environ.get("DBHOST")
+            self.params['database'] = os.environ.get("DBNAME")
+            self.params['user'] =  os.environ.get("DBUSERNAME")
+            self.params['password'] = os.environ.get("DBPASS")
+            self.params['port'] = os.environ.get("DBPORT")
+        return psycopg2.connect(**self.params)
 
     def create_request(self, 
         request_code:str, 
@@ -140,8 +151,24 @@ class ConnectorDB:
                         df.set_index('race_time', drop=False)
                         return df
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)                
-        
+            print(error)               
+
+    def get_list_race_date_by_year(self, year:str):
+        sql = f"""
+                SELECT json_agg(date(race_date))
+                FROM public.vw_race_dates_schedule
+                WHERE date_part('Year', race_date) = '{year}';
+            """
+        try:
+            self.conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+            cur = self.conn.cursor()
+            cur.execute(sql)
+
+            return cur.fetchone() if cur.rowcount > 0 else 0
+        except Exception as e:
+            print(e)
+            exit(1)
+
     def dump_race_results(self, gp_res:list):
         sql = f"""
                 INSERT INTO public.fact_race_gp_results_raw(
@@ -167,33 +194,4 @@ class ConnectorDB:
             if self.conn is not None and rollback_on_error:
                 self.conn.commit()
 
-    def execute_multiple(self, conn, statements, rollback_on_error=True):
-        """
-        Execute multiple SQL statements and returns the cursor from the last executed statement.
-
-        :param conn: The connection to the database
-        :type conn: Database connection
-
-        :param statements: The statements to be executed
-        :type statements: A list of strings
-
-        :param: rollback_on_error: Flag to indicate action to be taken on an exception
-        :type rollback_on_error: bool
-
-        :returns cursor from the last statement executed
-        :rtype cursor
-        """
-
-        try:
-            cursor = conn.cursor()
-            for statement in statements:
-                cursor.execute(statement)
-                if not rollback_on_error:
-                    conn.commit() # commit on each statement
-        except Exception as e:
-            if rollback_on_error:
-                conn.rollback()
-            raise
-        else:
-            if rollback_on_error:
-                conn.commit() # then commit only after all statements have completed successfully
+    

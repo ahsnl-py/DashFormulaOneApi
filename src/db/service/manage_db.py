@@ -2,7 +2,6 @@ import datetime
 import subprocess
 import os
 import configparser
-from turtle import back
 
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT

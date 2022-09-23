@@ -3,15 +3,25 @@ import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import os
 import datetime as dt
+import os
 from config.config import set_config
 
 class ConnectorDB:
 
     def __init__(self, db_config_file:str, db_config_sec:str) -> None:
         self.params = set_config(config_file_name = db_config_file, config_sec_name = db_config_sec)
-        self.conn = psycopg2.connect(**self.params)
+        self.conn = self.connection_db(db_config_file)
         self.filePath = '{0}\{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'cache\csv')  
-        self.dbObject = "" 
+        self.dbObject = ""
+
+    def connection_db(self, file_name):
+        if 'prod' in file_name:
+            self.params['host'] = os.environ.get("DBHOST")
+            self.params['database'] = os.environ.get("DBNAME")
+            self.params['user'] =  os.environ.get("DBUSERNAME")
+            self.params['password'] = os.environ.get("DBPASS")
+            self.params['port'] = os.environ.get("DBPORT")
+        return psycopg2.connect(**self.params)
 
     def create_request(self, 
         request_code:str, 

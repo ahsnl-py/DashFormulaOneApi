@@ -6,6 +6,9 @@ import configparser
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from config.config import set_config
+from dotenv import load_dotenv
+from pathlib import Path
+
 
 
 class DashF1DatabaseManager():
@@ -24,14 +27,22 @@ class DashF1DatabaseManager():
         self.timestr = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
         self.fileTempName = ''
 
-        def init_config():
+        def init_config(file_name):
+            if 'prod' in file_name:
+                self.params['host'] = os.environ.get("DBHOST")
+                self.params['database'] = os.environ.get("DBNAME")
+                self.params['user'] =  os.environ.get("DBUSERNAME")
+                self.params['password'] = os.environ.get("DBPASS")
+                self.params['port'] = os.environ.get("DBPORT")
+
             for k, val in self.params.items():
                 if k in self.dbConfig:
                     self.dbConfig[k] = val
 
             self.fileTempName = 'backup-{}-{}.dump'.format(self.timestr, self.dbConfig['database'])
+            load_dotenv(dotenv_path=Path('path/to/.env'))
 
-        init_config()
+        init_config(db_config_file)
 
     def is_database_exists(self, database_name:str) -> bool:
         """

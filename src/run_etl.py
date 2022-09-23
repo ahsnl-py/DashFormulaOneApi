@@ -34,8 +34,13 @@ def main():
                              help="verbose output")
     args = args_parser.parse_args()
 
-    db_type = "{}_dashpg".format(args.env)
-    db = ConnectorDB('dbconfig.ini', db_type)
+    config_file_name = ''
+    if args.env in ('dev', 'uat'):
+        config_file_name = 'dbconfig.ini'
+    elif args.env == 'prod':
+        config_file_name = 'prod_dbconfig.ini'
+
+    db = ConnectorDB(config_file_name, "{}_dashpg".format(args.env))
     etl = Box(
         args.jobconfig, 
         args.jobname,
@@ -53,7 +58,7 @@ def main():
 
         elif args.jobname == 'df1_ufl_race_results_yearly':
             race_dates = db.get_list_race_date_by_year(args.rdate[:4])
-            for i in range(len(race_dates[0])):
+            for i in range(len(race_dates[0][:4])): # <-- change back to normal enum
                 replace_param['job_rdate'] = race_dates[0][i]
                 etl.run_job()
 

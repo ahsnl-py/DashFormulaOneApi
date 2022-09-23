@@ -1,5 +1,5 @@
 .flaskenv
-
+.env
 .vscode
 *.pyc
 .DS_Store

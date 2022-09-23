@@ -2,6 +2,7 @@ import datetime
 import subprocess
 import os
 import configparser
+from turtle import back
 
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
@@ -38,44 +39,6 @@ class DashF1DatabaseManager():
             self.fileTempName = 'backup-{}-{}.dump'.format(self.timestr, self.dbConfig['database'])
 
         init_config(db_config_file)
-
-    def is_database_exists(self, database_name:str) -> bool:
-        """
-            Check if database exists
-        """
-        try:
-            proc = subprocess.Popen(
-                args=[
-                    'psql', 
-                    '--dbname=postgresql://{}:{}@{}:{}/{}'.format(
-                        self.dbConfig['user'], 
-                        self.dbConfig['password'], 
-                        self.dbConfig['host'],
-                        self.dbConfig['port'],
-                        self.dbConfig['database']
-                    ), 
-                    '-l'
-                ],
-                stdout=subprocess.PIPE
-            )
-            proc_2 = subprocess.Popen(
-                    "grep {}".format(database_name), 
-                    stdin=proc.stdout, 
-                    stdout=subprocess.PIPE
-            )
-            proc_3 = subprocess.Popen(
-                    'wc -l', 
-                    stdin=proc_2.stdout, 
-                    stdout=subprocess.PIPE
-            )
-            output = proc_3.communicate()[0]
-            if int(proc_3.returncode) != 0:
-                print('Command failed. Return code : {}'.format(proc_3.returncode))
-                exit(1)
-            return True if int(output) == 1 else False
-        except Exception as e:
-            print(e)
-            exit(1)
 
     def list_dash_db(self):
         """
@@ -142,7 +105,7 @@ class DashF1DatabaseManager():
             process = subprocess.Popen(
                 [
                     'pg_restore', 
-                    '--no-owner', 
+                    '--no-owner',                    
                     '--dbname=postgresql://{}:{}@{}:{}/{}'.format(
                         self.dbConfig['user'], 
                         self.dbConfig['password'], 
@@ -163,35 +126,33 @@ class DashF1DatabaseManager():
             print("Issue with the db restore : {}".format(e))
 
     def restore_simple_dash_db(self, file_name:str):
-        backup_file = "{0}\{1}.dump".format(self.fileTempPath, file_name)
+        # print(backup_file)
+        # backup_file = ''
         """
         Restore postgres db from a file in simple mode.
         """    
+        backup_file = "{0}\{1}.dump".format(self.fileTempPath, file_name)
         try:
-            if self.is_database_exists(self.dbConfig['database']):
-                process = subprocess.Popen(
-                    ['pg_restore',
-                        '-c',
-                        '--no-owner',
-                        '--dbname=postgresql://{}:{}@{}:{}/{}'.format(
-                                self.dbConfig['user'], 
-                                self.dbConfig['password'], 
-                                self.dbConfig['host'],
-                                self.dbConfig['port'],
-                                self.dbConfig['database']
-                            ),
-                        '-v',
-                        backup_file],
-                    stdout=subprocess.PIPE
-                )
-                output = process.communicate()[0]
-                if int(process.returncode) != 0:
-                    print('Command failed. Return code : {}'.format(process.returncode))
-                return output
-         
-            else:
-                self.create_dash_db(self.dbConfig['database'])
-                self.restore_simple_dash_db(file_name)
+            process = subprocess.Popen(
+                [
+                    'pg_restore', 
+                    '--no-owner', 
+                    '-c',
+                    '--dbname=postgresql://{}:{}@{}:{}/{}'.format(
+                        self.dbConfig['user'], 
+                        self.dbConfig['password'], 
+                        self.dbConfig['host'],
+                        self.dbConfig['port'],
+                        self.dbConfig['database']
+                    ), 
+                    '-v', backup_file
+                ],
+                stdout=subprocess.PIPE
+            )
+            output = process.communicate()[0]
+            if int(process.returncode) != 0:
+                print('Command failed. Return code : {}'.format(process.returncode))
+            return output
 
         except Exception as e:
             print("Issue with the db restore : {}".format(e))

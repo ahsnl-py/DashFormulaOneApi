@@ -16,31 +16,31 @@ def main():
     logger.addHandler(handler)
     args_parser = argparse.ArgumentParser(description='Postgres database management')
     args_parser.add_argument("--action",
-                             metavar="action",
-                             choices=['list', 'list_dbs', 'restore', 'backup', 'restore-s', 'static', 'test'],
-                             required=True)
+                                metavar="action",
+                                choices=['list', 'list_dbs', 'restore', 'restore-s','backup', 'static', 'test'],
+                                required=True)
     args_parser.add_argument("--env",
-                            choices=['dev', 'uat', 'prod'],
-                            required=True,
-                            default="dev",
-                            help="Choose database environment type")
+                                choices=['dev', 'uat', 'prod'],
+                                required=True,
+                                default="dev",
+                                help="Choose database environment type")
     args_parser.add_argument("--date",
-                             metavar="YYYY-MM-dd",
-                             help="Date to use for restore (show with --action list)")
+                                metavar="YYYY-MM-dd",
+                                help="Date to use for restore (show with --action list)")
     args_parser.add_argument("--dest-db",
-                             metavar="dest_db",
-                             default=None,
-                             help="Name of the new restored database")
-    args_parser.add_argument("--verbose",
-                             default=True,
-                             help="verbose output")
+                                metavar="dest_db",
+                                default=None,
+                                help="Name of the new restored database")
+    args_parser.add_argument("--mode",
+                                default='default',
+                                help="Choose management mode base on action input")
     args_parser.add_argument("--filename",
-                             required=False,
-                             help="Database file name for processing")
+                                required=False,
+                                help="Database file name for processing")
     args_parser.add_argument("--schema",
-                            required=False,
-                            default=False,
-                            help="Database backup with schema only")
+                                required=False,
+                                default=False,
+                                help="Database backup with schema only")
     
     args = args_parser.parse_args()
     config_file = ''
@@ -69,7 +69,7 @@ def main():
         logger.info('Backing up {} database to {}'.format(
             dbmanager.dbConfig['database'], dbmanager.fileTempName
         ))
-        result, backup_file = dbmanager.backup_dash_db()
+        result, backup_file = dbmanager.backup_dash_db(args.schema)
         for line in result.splitlines():
             logger.info(line)
         logger.info("Backup complete")

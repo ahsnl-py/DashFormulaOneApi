@@ -6,7 +6,7 @@ import pandas
 class ConnectorFastF1:
     def __init__(self) -> None:
         self.path = os.path.dirname(os.path.realpath(__file__))
-        self.pathToCache = "\cache"
+        self.pathToCache = "/cache"
         
     def cache_load(self):
         subdirname = os.path.basename(self.path)

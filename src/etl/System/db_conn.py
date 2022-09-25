@@ -5,6 +5,9 @@ import os
 import datetime as dt
 import os
 from config.config import set_config
+from sqlalchemy import create_engine
+import logging
+
 
 class ConnectorDB:
 
@@ -13,6 +16,22 @@ class ConnectorDB:
         self.conn = self.connection_db(db_config_file)
         self.filePath = os.path.normpath('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'cache/csv'))
         self.dbObject = ""
+        self.engine = create_engine(
+                            'postgresql://{}:{}@{}:{}/{}'.format(
+                                self.params['user'], 
+                                self.params['password'], 
+                                self.params['host'],
+                                self.params['port'],
+                                self.params['database']))
+        def init():
+            logger = logging.getLogger(__name__)            
+            logger.setLevel(logging.INFO)
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+
+        init()
 
     def connection_db(self, file_name):
         if 'prod' in file_name:
@@ -93,37 +112,55 @@ class ConnectorDB:
             df.to_csv(exportPath, sep=',', encoding='utf-8', index=False, header='true')    
         return True if len(pd.read_csv(exportPath)) == len(df) else False
 
-    def load_from_csv(self, file_name:str, db_obj:str):
+    def load_from_csv(self, file_name:str, db_obj:str, request_id, env_type:str="dev"):
         try:
-            operation = ""
-            with self.conn:
-                with self.conn.cursor() as curs:
-                    operation = f"""
-                        COPY public.{db_obj} ({','.join(self.get_db_obj_cols(db_obj, curs))})
-                        FROM '{self.filePath}/{file_name}'
-                        DELIMITER ','
-                        CSV HEADER
-                    """
-                with self.conn.cursor() as curs:
-                    curs.execute(operation)
-                    log_row_count = f"Details: Number of rows affected by statement: {curs.rowcount} rows affected."
-                    if curs.rowcount > 0:
-                        return True, log_row_count
-                    return False, log_row_count
+            csv_file = "{}/{}".format(self.filePath, file_name)
+            status = False # Success - True, Fail - False
+            row_count = 0
+            colums = self.get_db_obj_cols(db_obj)
+            if env_type == 'dev':
+                operation = f"""
+                    COPY public.{db_obj} ({','.join(colums)})
+                    FROM '{csv_file}'
+                    DELIMITER ','
+                    CSV HEADER
+                """
+                with self.conn:
+                    with self.conn.cursor() as curs:
+                        curs.execute(operation)
+                        row_count = curs.rowcount
+                        print(f"Details: Number of rows affected by statement: {row_count} rows affected.")
+                        status = True
+
+            else:
+                df = pd.read_csv(csv_file)
+                df.columns = colums
+                df.to_sql(
+                    db_obj, 
+                    self.engine, 
+                    if_exists="append",  # Options are ‘fail’, ‘replace’, ‘append’, default ‘fail’
+                    index = False # Do not output the index of the dataframe
+                )
+                row_count = len(df.index)
+                print(f"Details: Number of rows affected by statement: {row_count} rows affected.")
+                status = True if self.validate_insert(db_obj, request_id, row_count) else False
 
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)                
         finally:                
             self.conn.commit()
-        return 
+            return True if status else False
+        
 
-    def get_db_obj_cols(self, db_obj, curs) -> list:
-        query = f"""
-                SELECT * 
-                FROM public.{db_obj} 
-                LIMIT 1
-            """
-        curs.execute(query)
+    def get_db_obj_cols(self, db_obj) -> list:
+        with self.conn:
+            with self.conn.cursor() as curs:
+                query = f"""
+                        SELECT * 
+                        FROM public.{db_obj} 
+                        LIMIT 1
+                    """
+                curs.execute(query)
         return [cols[0] for cols in curs.description if cols[0] != "race_id"]
     
     def get_race_info_by_date(self, race_date:str):
@@ -168,6 +205,22 @@ class ConnectorDB:
         except Exception as e:
             print(e)
             exit(1)
+    
+    def validate_insert(self, obj_name, request_id, validate_count):
+        sql = f"""
+                SELECT COUNT(request_id) FROM public.{obj_name} 
+                WHERE request_id = {request_id}
+            """
+        try:
+            self.conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+            cur = self.conn.cursor()
+            cur.execute(sql)
+            count = cur.fetchone() if cur.rowcount > 0 else 0
+            print(f"Row count: {count[0]}; Row to Validate: {validate_count}")
+            return True if count[0] == validate_count else False
+        except Exception as e:
+            print(e)
+            exit(1)
 
     def dump_race_results(self, gp_res:list):
         sql = f"""
@@ -177,6 +230,8 @@ class ConnectorDB:
             """
         self.execute_many(sql, gp_res)
         return True 
+
+
                 
     def execute_many(self, statement:str, res_list:list, rollback_on_error:bool=True):
         try:

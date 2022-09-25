@@ -1,4 +1,5 @@
 from distutils.log import debug
+import os
 import calendar
 import pycountry
 import json
@@ -65,3 +66,4 @@ class DashF1Tool:
                 "Race": "RACE"
         }
         return race_type_code[event_type]
+        

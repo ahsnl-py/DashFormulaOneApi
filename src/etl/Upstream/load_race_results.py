@@ -7,11 +7,11 @@ from etl.System.handle_config import HandleJobConfig
 
 class LoadRaceResults(HandleJobConfig):
     
-    def __init__(self, config:dict, job_name:str, env_config:str, env_type:str) -> None:
+    def __init__(self, config:dict, job_name:str, db_env_config:str, env_type:str) -> None:
         HandleJobConfig.__init__(self)
         HandleJobConfig.__call__(self, **config)
         self.jobName = job_name
-        self.db = cdb('{}.ini'.format(env_config), '{}_dashpg'.format(env_type))
+        self.db = cdb(db_env_config, '{}_dashpg'.format(env_type))
 
     def exec_job(self):
         # create request 
@@ -37,11 +37,11 @@ class LoadRaceResults(HandleJobConfig):
                     if not self.check_job_status(job):
                         request = self.extractData()
                         if request:
-                            self.jobState[id]['isComplete'] = True 
                             status = "success" 
                         else:
                             status = "fail"
                             msg = "Issue detect while extracting request data"
+                        self.jobState[id]['isComplete'] = True 
                     self.check_job_status(job, status)
              
         else:

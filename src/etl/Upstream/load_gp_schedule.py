@@ -11,13 +11,13 @@ from etl.System.handle_config import HandleJobConfig
     
 class LoadGPSchedule(HandleJobConfig):
 
-    def __init__(self, job_config:dict, job_name:str, env_config:str, env_type:str=''):
+    def __init__(self, job_config:dict, job_name:str, db_env_config:str, env_type:str=''):
         HandleJobConfig.__init__(self)
         HandleJobConfig.__call__(self, **job_config)
         self.jobName = job_name
+        self.env = env_type
         self.db = cdb(
-            '{}.ini'.format(env_config), 
-            "{}_dashpg".format(env_type if env_type !='' else 'dev')
+            db_env_config, "{}_dashpg".format(env_type if env_type !='' else 'dev')
         )
      
     def exec_job(self):
@@ -32,7 +32,7 @@ class LoadGPSchedule(HandleJobConfig):
         )
         
         req_id, status_id = req_id[0], True if req_id[1] != 1 else False
-        if status_id: 
+        if status_id:
             msg = ""
             self.jobConfig['job_id'] = req_id         
             self.jobConfig['job_status'] = init_status_id
@@ -42,17 +42,15 @@ class LoadGPSchedule(HandleJobConfig):
                 if job == "extract": 
                     if not self.check_job_status(job):
                         request, obj = self.extractData()
-                        if request:
-                            self.jobState[id]['isComplete'] = True 
-                            status = "success" 
+                        if request: status = "success"
+                        self.jobState[id]['isComplete'] = True 
                     self.check_job_status(job, status, obj[0])
                 
                 elif job == "transform":  
                     if not self.check_job_status(job):                    
                         request = self.transformData()
-                        if request:
-                            self.jobState[id]['isComplete'] = True 
-                            status = "success" 
+                        if request: status = "success" 
+                        self.jobState[id]['isComplete'] = True
                     self.check_job_status(job, status)
 
                 else: 
@@ -91,6 +89,7 @@ class LoadGPSchedule(HandleJobConfig):
         if response:
             request = request.loc[:, self.gp_schedule_schema()]
             request['request_id'] = self.jobConfig['job_id']
+            
             self.isJobComplete = self.db.load_to_csv(
                 df=request, 
                 file_name=file_name
@@ -100,7 +99,12 @@ class LoadGPSchedule(HandleJobConfig):
 
     def transformData(self):
         # delete file after loading
-        return self.db.load_from_csv(f"gp_schedule_{self.raceYear}.csv", 'fact_race_gp_schedule')
+        return self.db.load_from_csv(
+            file_name=f"gp_schedule_{self.raceYear}.csv", 
+            db_obj='fact_race_gp_schedule', 
+            request_id=self.jobConfig['job_id'],
+            env_type=self.env
+        )
 
     def loadData(self):
         self.jobConfig["job_type"][0]

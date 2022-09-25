@@ -1,3 +1,4 @@
+from re import S
 from select import select
 from etl.Upstream.load_gp_schedule import LoadGPSchedule
 from etl.Upstream.load_race_results import LoadRaceResults
@@ -6,10 +7,11 @@ from config.config import set_config
 
 class Box:
 
-    def __init__(self, job_config_file_name:str, job_name:str, env_type:str):
+    def __init__(self, job_config_file_name:str, job_name:str, env_type:str, db_config_file:str):
         self.jobConfigName = job_config_file_name
         self.jobName = job_name
         self.jobEnvType = env_type
+        self.jobDBConfig = db_config_file
         self.jobParams = set_config(
             config_file_name=self.jobConfigName,
             config_sec_name=self.jobName
@@ -23,7 +25,7 @@ class Box:
             return LoadGPSchedule(
                 job_config=self.jobParams, 
                 job_name=self.jobName,
-                env_config='dbconfig',
+                db_env_config=self.jobDBConfig,
                 env_type=self.jobEnvType
             ).exec_job()
 
@@ -31,6 +33,6 @@ class Box:
             return LoadRaceResults(
                 config=self.jobParams, 
                 job_name=self.jobName,
-                env_config='dbconfig',
+                db_env_config=self.jobDBConfig,
                 env_type=self.jobEnvType
             ).exec_job()

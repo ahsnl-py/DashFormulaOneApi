@@ -34,17 +34,18 @@ def main():
                              help="verbose output")
     args = args_parser.parse_args()
 
-    config_file_name = ''
+    db_config_file = ''
     if args.env in ('dev', 'uat'):
-        config_file_name = 'dbconfig.ini'
+        db_config_file = 'dbconfig.ini'
     elif args.env == 'prod':
-        config_file_name = 'prod_dbconfig.ini'
+        db_config_file = 'prod_dbconfig.ini'
 
-    db = ConnectorDB(config_file_name, "{}_dashpg".format(args.env))
+    db = ConnectorDB(db_config_file, "{}_dashpg".format(args.env))
     etl = Box(
         args.jobconfig, 
         args.jobname,
-        args.env
+        args.env,
+        db_config_file
     )
 
     if not args.rdate:

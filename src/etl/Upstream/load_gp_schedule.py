@@ -11,13 +11,12 @@ from etl.System.handle_config import HandleJobConfig
     
 class LoadGPSchedule(HandleJobConfig):
 
-    def __init__(self, job_config:dict, job_name:str, env_config:str, env_type:str=''):
+    def __init__(self, job_config:dict, job_name:str, db_env_config:str, env_type:str=''):
         HandleJobConfig.__init__(self)
         HandleJobConfig.__call__(self, **job_config)
         self.jobName = job_name
         self.db = cdb(
-            '{}.ini'.format(env_config), 
-            "{}_dashpg".format(env_type if env_type !='' else 'dev')
+            db_env_config, "{}_dashpg".format(env_type if env_type !='' else 'dev')
         )
      
     def exec_job(self):
@@ -32,7 +31,7 @@ class LoadGPSchedule(HandleJobConfig):
         )
         
         req_id, status_id = req_id[0], True if req_id[1] != 1 else False
-        if status_id: 
+        if status_id:
             msg = ""
             self.jobConfig['job_id'] = req_id         
             self.jobConfig['job_status'] = init_status_id
@@ -44,7 +43,7 @@ class LoadGPSchedule(HandleJobConfig):
                         request, obj = self.extractData()
                         if request:
                             self.jobState[id]['isComplete'] = True 
-                            status = "success" 
+                            status = "success"
                     self.check_job_status(job, status, obj[0])
                 
                 elif job == "transform":  

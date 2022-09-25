@@ -11,7 +11,7 @@ class ConnectorDB:
     def __init__(self, db_config_file:str, db_config_sec:str) -> None:
         self.params = set_config(config_file_name = db_config_file, config_sec_name = db_config_sec)
         self.conn = self.connection_db(db_config_file)
-        self.filePath = os.path.normpath('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'cache\csv'))
+        self.filePath = os.path.normpath('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'cache/csv'))
         self.dbObject = ""
 
     def connection_db(self, file_name):

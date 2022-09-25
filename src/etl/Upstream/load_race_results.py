@@ -37,11 +37,11 @@ class LoadRaceResults(HandleJobConfig):
                     if not self.check_job_status(job):
                         request = self.extractData()
                         if request:
-                            self.jobState[id]['isComplete'] = True 
                             status = "success" 
                         else:
                             status = "fail"
                             msg = "Issue detect while extracting request data"
+                        self.jobState[id]['isComplete'] = True 
                     self.check_job_status(job, status)
              
         else:

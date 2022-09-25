@@ -107,7 +107,7 @@ class ConnectorDB:
         return
 
     def load_to_csv(self, df, file_name) -> bool:
-        exportPath = '{0}\{1}'.format(self.filePath, file_name)
+        exportPath = os.path.normpath('{0}/{1}'.format(self.filePath, file_name))
         if not os.path.exists(exportPath):
             df.to_csv(exportPath, sep=',', encoding='utf-8', index=False, header='true')    
         return True if len(pd.read_csv(exportPath)) == len(df) else False

@@ -35,7 +35,7 @@ def main():
     args = args_parser.parse_args()
 
     db_config_file = ''
-    if args.env in ('dev', 'uat'):
+    if args.env == 'dev' or args.env == 'uat':
         db_config_file = 'dbconfig.ini'
     elif args.env == 'prod':
         db_config_file = 'prod_dbconfig.ini'
@@ -59,7 +59,7 @@ def main():
 
         elif args.jobname == 'df1_ufl_race_results_yearly':
             race_dates = db.get_list_race_date_by_year(args.rdate[:4])
-            for i in range(len(race_dates[0][:4])): # <-- change back to normal enum
+            for i in range(len(race_dates[0])): # <-- change back to normal enum
                 replace_param['job_rdate'] = race_dates[0][i]
                 etl.run_job()
 

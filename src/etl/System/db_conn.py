@@ -57,7 +57,7 @@ class ConnectorDB:
                 with self.conn.cursor() as curs:
                     operation_proc = f"""
                             CALL public.create_request(
-                                '{request_code}'::varchar(20),
+                                '{request_code}'::varchar,
                                 '{race_date}'::date, 
                                 {request_status_id}::int2, 
                                 '{request_start_date}'::timestamp, 
@@ -97,7 +97,7 @@ class ConnectorDB:
                             CALL public.close_request(
                                 {request_id}::int, 
                                 {request_status_id}::smallint,
-                                '{request_type_code}'::varchar(30), 
+                                '{request_type_code}'::varchar, 
                                 '{request_end_date}'::timestamp);
                             """                    
                     curs.execute(operation_proc)

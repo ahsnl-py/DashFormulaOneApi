@@ -1,5 +1,4 @@
 .flaskenv
-.env
 .vscode
 *.pyc
 .DS_Store
@@ -91,7 +90,6 @@ celerybeat-schedule
 *.sage.py
 
 # Environments
-.env
 .venv
 env/
 venv/

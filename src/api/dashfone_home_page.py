@@ -46,19 +46,17 @@ def getHomeOverviewStats(race_date:str, code:str):
     return json.dumps(request), HTTP_200_OK
     
 
-@stats.get("/<string:id>/<string:rdate>")
+@stats.get("/<string:id>/<int:ryear>")
 @cross_origin()
-def getHomeStats(rdate, id):
+def getHomeStats(ryear:int, id:str):
     query = ""
-    # year = str(datetime.datetime.now().date())
-    year = rdate
     if id == "driver-stats":
         query = f"""
                     SELECT standing_pos as Rank, 
                             full_name   as Driver,
                             team        as Team,
                             points      as Points
-                    FROM public.udf_get_drivers_standings_by_year('{year}'::date)
+                    FROM public.udf_get_drivers_standings_by_year('{str(ryear)}')
                 """
     elif id == "constructor-stats":
         query = f"""
@@ -66,7 +64,7 @@ def getHomeStats(rdate, id):
                             team_name       as Driver,
                             drivers         as Team,
                             points          as Point
-                    FROM public.udf_get_constructors_standings_by_year('{(year)}::date')
+                    FROM public.udf_get_constructors_standings_by_year('{str(ryear)}')
                 """
     print(query)
     df_drivers = pd.read_sql_query(query, con=db.engine)

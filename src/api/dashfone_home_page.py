@@ -97,7 +97,7 @@ def getHomeSchedule(year:int):
                 race_session_four_date,
                 race_session_five,
                 race_session_five_date
-            from fact_race_gp_schedule
+            from vw_race_session_schedule
             where date_part('year', race_date) = '{str(year)}'
     """
     df_json = pd.read_sql_query(query, con=db.engine)

@@ -1,4 +1,5 @@
 from distutils.log import debug
+from itertools import count
 import os
 import calendar
 import pycountry
@@ -39,11 +40,6 @@ class DashF1Tool:
                         ])
             
             country = schedule_details['race_country']
-            if country == 'Great Britain':
-                country = 'United Kingdom'
-            elif country == 'Abu Dhabi':
-                country = 'United Arab Emirates'
-
             gp_schedule.append({
                 'id': idx,
                 'gpCountry': country,
@@ -62,6 +58,7 @@ class DashF1Tool:
                 "Practice 2": "FP 2",
                 "Practice 3": "FP 3",
                 "Sprint": "SPRI",
+                "Sprint Qualifying": "SPQU",
                 "Qualifying": "QUAL",
                 "Race": "RACE"
         }

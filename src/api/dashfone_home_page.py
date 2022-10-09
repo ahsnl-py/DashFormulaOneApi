@@ -55,7 +55,8 @@ def getHomeStats(ryear:int, id:str):
                     SELECT standing_pos as Rank, 
                             full_name   as Driver,
                             team        as Team,
-                            points      as Points
+                            points      as Points,
+                            team_color  as TeamColor
                     FROM public.udf_get_drivers_standings_by_year('{str(ryear)}')
                 """
     elif id == "constructor-stats":
@@ -65,8 +66,15 @@ def getHomeStats(ryear:int, id:str):
                             drivers         as Team,
                             points          as Point
                     FROM public.udf_get_constructors_standings_by_year('{str(ryear)}')
+                """ 
+
+    elif id == "driver-stats-charts":
+        query = f"""
+                    select  race_event_date AS event_date, 
+                            race_event_points AS event_point
+                    from public.udf_get_driver_standings_by_year_json('{str(ryear)}')
                 """
-    print(query)
+    
     df_drivers = pd.read_sql_query(query, con=db.engine)
     if df_drivers.empty:
         return jsonify({'message': 'Item not found'}), HTTP_404_NOT_FOUND
@@ -79,33 +87,46 @@ def getHomeStats(ryear:int, id:str):
     
     return request, HTTP_200_OK
 
-@stats.get("/race-schedule/<int:year>")
+@stats.get("/event/<string:schedule_type>/<int:year>")
 @cross_origin()
-def getHomeSchedule(year:int):
-    query = f"""    
-            select 
-                race_country,
-                race_location,
-                race_event_name_official,                
-                race_session_one,
-                race_session_one_date,
-                race_session_two,
-                race_session_two_date,
-                race_session_three,
-                race_session_three_date,
-                race_session_four,
-                race_session_four_date,
-                race_session_five,
-                race_session_five_date
-            from vw_race_session_schedule
-            where date_part('year', race_date) = '{str(year)}'
-    """
+def getHomeSchedule(schedule_type:str, year:int):
+    print(schedule_type)
+    query:str
+    if schedule_type == 'race-schedule':
+        query = f"""    
+                select 
+                    race_country,
+                    race_location,
+                    race_event_name_official,                
+                    race_session_one,
+                    race_session_one_date,
+                    race_session_two,
+                    race_session_two_date,
+                    race_session_three,
+                    race_session_three_date,
+                    race_session_four,
+                    race_session_four_date,
+                    race_session_five,
+                    race_session_five_date
+                from vw_race_session_schedule
+                where date_part('year', race_date) = '{str(year)}'
+        """
+    elif schedule_type == 'race-date-list':
+        query = f"""
+                    SELECT json_agg(date(race_date)) as labels
+                    FROM public.vw_race_dates_schedule
+                    WHERE date_part('Year', race_date) = '{str(year)}'
+                """
     df_json = pd.read_sql_query(query, con=db.engine)
     if df_json.empty:
         return jsonify({'message': 'Item not found'}), HTTP_404_NOT_FOUND
-    parse = df1Tool.parseGPSchedule(df_json.to_json(orient="split"))
+    
+    parse:object
+    if schedule_type == 'race-schedule':
+        parse = df1Tool.parseGPSchedule(df_json.to_json(orient="split"))
+    else:
+        parse = json.loads(df_json.to_json(orient="records"))[0]        
     return json.dumps(parse), HTTP_200_OK
-
 
 
 

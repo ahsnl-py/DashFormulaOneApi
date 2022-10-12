@@ -59,20 +59,31 @@ def getHomeStats(ryear:int, id:str):
                             team_color  as TeamColor
                     FROM public.udf_get_drivers_standings_by_year('{str(ryear)}')
                 """
+
     elif id == "constructor-stats":
         query = f"""
                     SELECT standing_pos     as Rank, 
-                            team_name       as Driver,
-                            drivers         as Team,
-                            points          as Point
+                            team_name       as Constructor,
+                            drivers         as Driver,
+                            points          as Points
                     FROM public.udf_get_constructors_standings_by_year('{str(ryear)}')
                 """ 
 
     elif id == "driver-stats-charts":
         query = f"""
                     select  race_event_date AS event_date, 
-                            race_event_points AS event_point
+                            race_event_points AS event_point,
+                            color as team_colors
                     from public.udf_get_driver_standings_by_year_json('{str(ryear)}')
+                """
+
+    elif id == "constructor-stats-charts":
+        query = f"""
+                    select  race_event_date AS event_date, 
+                            race_event_points AS event_point,
+                            color as team_colors
+                    from public.udf_get_constructor_standings_by_year_json('{str(ryear)}')
+                    order by race_event_date asc;
                 """
     
     df_drivers = pd.read_sql_query(query, con=db.engine)
@@ -90,7 +101,6 @@ def getHomeStats(ryear:int, id:str):
 @stats.get("/event/<string:schedule_type>/<int:year>")
 @cross_origin()
 def getHomeSchedule(schedule_type:str, year:int):
-    print(schedule_type)
     query:str
     if schedule_type == 'race-schedule':
         query = f"""    
